@@ -1,5 +1,5 @@
-inputday = input("enter a day of the week. (such like Monday,tuesday)")
-day = inputday.lower()
+input_day = input("enter a day of the week. (Monday,tuesday)")
+day = input_day.lower()
 if day == "monday":
     print("Monday is day 1")
 elif day == "tuesday":
