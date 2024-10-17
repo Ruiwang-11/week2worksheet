@@ -1,17 +1,21 @@
+inputday = input("enter a day of the week. (such like Monday,tuesday)")
+day = inputday.lower()
+if day == "monday":
+    print("Monday is day 1")
+elif day == "tuesday":
+    print("Tuesday is day 2")
+elif day == "wednesday":
+    print("Wednesday is day 3")
+elif day == "thursday":
+    print("Thursday is day 4")
+elif day == "friday":
+    print("Friday is day 5")
+elif day == "saturday":
+    print("Saturday is day 6")
+elif day == "sunday":
+    print("Sunday is day 7")
+else:
+    print("Please enter a valid day, exit.")
 
 
-days_of_week= {
-            'monday':1,
-            'tuesday':2,
-            'wednesday':3,
-            'thursday':4,
-            'friday':5,
-            'saturday':6,
-            'sunday':7
-}
-user_input=input(f"Enter a day of the week {"Monday", "Tuesday", }:").strip().lower()
-if user_input in days_of_week:  
-    day_number=days_of_week[user_input]
-    print(f" { user_input.capitalize()} is day {day_number}") 
-else: 
-    print("Please enter a valid day")                            
+                           
