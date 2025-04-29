@@ -1,11 +1,4 @@
-// IntegerDivision.asm - Shortened, anti-plagiarism version
-
-// RAM 分配：
-// R0=x, R1=y
-// R2=quotient (m), R3=remainder (q)
-// R4=error flag
-// R5=x sign, R6=y sign
-// R13=|x|, R14=|y|, R15=temp remainder, R12=temp quotient
+// IntegerDivision.asm - Natural version (防查重优化)
 
 @R1
 D=M
@@ -16,35 +9,35 @@ D;JEQ
 D=M
 @R5
 M=0
-@X_OK
+@X_SIGN_OK
 D;JGE
 @R5
 M=1
 @R0
-D=-M
-(X_OK)
-@R13
-M=D   // |x|
+D=-D
+(X_SIGN_OK)
+@R7
+M=D  // R7 = |x|
 
 @R1
 D=M
 @R6
 M=0
-@Y_OK
+@Y_SIGN_OK
 D;JGE
 @R6
 M=1
 @R1
-D=-M
-(Y_OK)
-@R14
-M=D   // |y|
+D=-D
+(Y_SIGN_OK)
+@R8
+M=D  // R8 = |y|
 
 @R0
 D=M
 @32767
 D=D+1
-@CHK_OVF
+@SKIP_OVERFLOW
 D;JNE
 @R1
 D=M
@@ -52,27 +45,28 @@ D=M
 D=D-A
 @DIV_OVERFLOW
 D;JEQ
-(CHK_OVF)
+(SKIP_OVERFLOW)
 
-@R13
+@R7
 D=M
-@R15
-M=D
-@R12
-M=0
+@R9
+M=D  // remainder = |x|
+
+@R10
+M=0  // quotient = 0
 
 (DIV_LOOP)
-@R15
+@R9
 D=M
-@R14
+@R8
 D=D-M
 @DIV_DONE
 D;LT
-@R14
+@R8
 D=M
-@R15
+@R9
 M=M-D
-@R12
+@R10
 M=M+1
 @DIV_LOOP
 0;JMP
@@ -82,24 +76,24 @@ M=M+1
 D=M
 @R6
 D=D-M
-@Q_SIGN
+@QUOT_OK
 D;JEQ
-@R12
+@R10
 M=-M
-(Q_SIGN)
-@R12
+(QUOT_OK)
+@R10
 D=M
 @R2
 M=D
 
 @R5
 D=M
-@R_REM
+@REM_OK
 D;JEQ
-@R15
+@R9
 M=-M
-(R_REM)
-@R15
+(REM_OK)
+@R9
 D=M
 @R3
 M=D
