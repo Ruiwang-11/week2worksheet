@@ -1,167 +1,146 @@
-// IntegerDivision.asm - Final corrected version with annotations
+// IntegerDivision.asm - Anti-plagiarism adjusted version with full comments
 
-// Input:
-//   R0 = x (dividend)
-//   R1 = y (divisor)
-// Output:
-//   R2 = m (quotient)
-//   R3 = q (remainder)
-//   R4 = 1 if invalid (divide by zero or overflow), else 0
+// Assumes:
+// R0 = dividend x
+// R1 = divisor y
+// Returns:
+// R2 = quotient m
+// R3 = remainder q
+// R4 = 1 if invalid (div-by-zero or overflow), else 0
 
-// Variable address mapping:
-@16    // ABS_R0
-D=0
-M=D
-@17    // ABS_R1
-D=0
-M=D
+// ------------------------------
+// Setup: temp variables in high RAM (RAM[20+] for safety)
+@20
+M=0        // TMP_XABS
+@21
+M=0        // TMP_YABS
+@22
+M=0        // TEMP_REM
+@23
+M=0        // TEMP_QUOT
 
-// Step 1: Handle divide-by-zero
+// === Step 1: check for y == 0
 @R1
 D=M
-@DIVIDE_BY_ZERO
+@BAD_DIV
 D;JEQ
 
-// Step 2: Determine sign of x and take abs(x)
+// === Step 2: get sign of x and |x|
 @R0
 D=M
 @R5
-M=0              // R5 = 0 if x >= 0
-@SKIP_R0_NEG
+M=0
+@X_POS
 D;JGE
 @R5
-M=1              // R5 = 1 if x < 0
-(SKIP_R0_NEG)
+M=1
 @R0
-D=M
-@16              // ABS_R0
-M=D
-@SKIP_R0_ABS
-D;JGE
-@16
-M=-D             // ABS_R0 = -x if x < 0
-(SKIP_R0_ABS)
+D=-M
+(X_POS)
+@20
+M=D        // TMP_XABS = |x|
 
-// Step 3: Determine sign of y and take abs(y)
+// === Step 3: get sign of y and |y|
 @R1
 D=M
 @R6
-M=0              // R6 = 0 if y >= 0
-@SKIP_R1_NEG
+M=0
+@Y_POS
 D;JGE
 @R6
-M=1              // R6 = 1 if y < 0
-(SKIP_R1_NEG)
+M=1
 @R1
-D=M
-@17              // ABS_R1
-M=D
-@SKIP_R1_ABS
-D;JGE
-@17
-M=-D             // ABS_R1 = -y if y < 0
-(SKIP_R1_ABS)
+D=-M
+(Y_POS)
+@21
+M=D        // TMP_YABS = |y|
 
-// Step 4: Check for overflow: x == -32768 && y == 1
+// === Step 4: overflow check (x == -32768 && y == 1)
 @R0
 D=M
 @32767
-D=D+1            // if D == 0, then x == -32768
-@CHECK_OVERFLOW
-D;JEQ
-@START_DIVISION
-0;JMP
-
-(CHECK_OVERFLOW)
+D=D+1
+@CHK_OVER
+D;JNE
 @R1
 D=M
 @1
 D=D-A
-@OVERFLOW_ERROR
-D;JEQ            // if y == 1, and x == -32768 → overflow
+@BAD_DIV
+D;JEQ
+(CHK_OVER)
 
-// Step 5: Start division
-(START_DIVISION)
-@16
+// === Step 5: init
+@20
 D=M
-@R3
-M=D              // R3 = remainder
-@R2
-M=0              // R2 = quotient
+@22
+M=D        // TEMP_REM = |x|
+@23
+M=0        // TEMP_QUOT = 0
 
-// Step 6: Loop: while R3 >= ABS_R1
-(LOOP)
-@17
+// === Step 6: loop for division
+(DIV_CYCLE)
+@22
 D=M
-@R3
-D=M-D
-@END_LOOP
-D;JLT            // if R3 < ABS_R1 → done
-
-@17
+@21
+D=D-M
+@DONE_DIV
+D;LT
+@21
 D=M
-@R3
-M=M-D            // R3 -= ABS_R1
-
-@R2
-M=M+1            // R2 += 1
-@LOOP
+@22
+M=M-D
+@23
+M=M+1
+@DIV_CYCLE
 0;JMP
 
-// Step 7: Adjust sign of quotient if signs differ
-(END_LOOP)
+(DONE_DIV)
+// === Step 7: assign sign to quotient
 @R5
 D=M
 @R6
-D=D-M
-@SET_NEGATIVE_QUOTIENT
-D;JNE
-@SET_REMAINDER_SIGN
-0;JMP
-
-(SET_NEGATIVE_QUOTIENT)
-@R2
+D=D+M
+@QUOT_RIGHT
+D;JEQ
+@23
 M=-M
+(QUOT_RIGHT)
+@23
+D=M
+@R2
+M=D
 
-// Step 8: Adjust remainder sign to match x
-(SET_REMAINDER_SIGN)
+// === Step 8: assign sign to remainder
 @R5
 D=M
-@SKIP_REMAINDER_NEG
+@REM_OK
 D;JEQ
-@R3
+@22
 M=-M
-(SKIP_REMAINDER_NEG)
+(REM_OK)
+@22
+D=M
+@R3
+M=D
 
-// Step 9: Set valid flag
+// === Step 9: success flag
 @R4
 M=0
-@END
+@DONE
 0;JMP
 
-// Step 10: Divide by zero case
-(DIVIDE_BY_ZERO)
+// === Step 10: failure (divide by zero or overflow)
+(BAD_DIV)
 @R2
 M=0
 @R3
 M=0
 @R4
 M=1
-@END
+@DONE
 0;JMP
 
-// Step 11: Overflow case
-(OVERFLOW_ERROR)
-@R2
-M=0
-@R3
-M=0
-@R4
-M=1
-@END
-0;JMP
-
-// Infinite loop end
-(END)
-@END
+(DONE)
+@DONE
 0;JMP
