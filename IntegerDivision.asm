@@ -1,152 +1,126 @@
-// ------------------------
-// Step 1: Handle y == 0
+// Step 1: Check if divisor y == 0
 @R1
 D=M
 @DIV_ZERO
-D;JEQ        // If y == 0, division invalid
+D;JEQ
 
-// ------------------------
-// Step 2: Store x, y signs in R5, R6
+// Step 2: Store |x| in R5 and sign of x in R10
 @R0
 D=M
 @X_NEG
 D;JLT
 @R5
-M=0          // R5 = 0 => x >= 0
+M=D       // R5 = x (x is positive)
+@R10
+M=0       // R10 = 0 => x >= 0
 @X_DONE
 0;JMP
 (X_NEG)
+D=-D
 @R5
-M=1          // R5 = 1 => x < 0
+M=D       // R5 = |x|
+@R10
+M=1       // R10 = 1 => x < 0
 (X_DONE)
 
+// Step 3: Store |y| in R6 and sign of y in R11
 @R1
 D=M
 @Y_NEG
 D;JLT
 @R6
-M=0          // R6 = 0 => y >= 0
+M=D       // R6 = y (y is positive)
+@R11
+M=0       // R11 = 0 => y >= 0
 @Y_DONE
 0;JMP
 (Y_NEG)
+D=-D
 @R6
-M=1          // R6 = 1 => y < 0
+M=D       // R6 = |y|
+@R11
+M=1       // R11 = 1 => y < 0
 (Y_DONE)
 
-// ------------------------
-// Step 3: Get abs(x) -> R7, abs(y) -> R8
-@R0
-D=M
-@ABSX_POS
-D;JGE
-D=-D
-(ABSX_POS)
-@R7
-M=D          // R7 = |x|
-
-@R1
-D=M
-@ABSY_POS
-D;JGE
-D=-D
-(ABSY_POS)
-@R8
-M=D          // R8 = |y|
-
-// ------------------------
-// Step 4: Division Loop
-@R7
-D=M
-@R9
-M=D          // R9 = remainder (initially = |x|)
-
-@R10
-M=0          // R10 = quotient = 0
-
-(DIV_LOOP)
-@R9
-D=M
-@R8
-D=D-M
-@DIV_DONE
-D;LT         // If remainder < y, done
-
-@R8
-D=M
-@R9
-M=M-D        // R9 -= y
-
-@R10
-M=M+1        // quotient++
-
-@DIV_LOOP
-0;JMP
-
-(DIV_DONE)
-// R10 = |quotient|
-// R9 = |remainder|
-
-// ------------------------
-// Step 5: Set quotient sign
+// Step 4: Division Loop: R5 = |x|, R6 = |y|
 @R5
 D=M
-@R11
-M=D          // R11 = sign of x
+@R7
+M=D       // R7 = remaining = |x|
+@R8
+M=0       // R8 = quotient = 0
 
-// if x_sign != y_sign then quotient = -quotient
-@R5
+(LOOP)
+@R7
 D=M
 @R6
 D=D-M
-@POS_QUOTIENT
-D;JEQ        // if signs equal, leave quotient positive
+@AFTER_LOOP
+D;LT
 
+// R7 = R7 - R6
+@R6
+D=M
+@R7
+M=M-D
+
+// R8++
+@R8
+M=M+1
+@LOOP
+0;JMP
+
+(AFTER_LOOP)
+// Step 5: Set quotient sign
 @R10
+D=M
+@R11
+D=D+M
+@QUOT_POS
+D;JEQ     // if x and y have same sign, quotient is positive
+
+@R8
 D=M
 D=-D
 @R2
 M=D
-@REM_SIGN
+@SET_REM
 0;JMP
 
-(POS_QUOTIENT)
-@R10
+(QUOT_POS)
+@R8
 D=M
 @R2
 M=D
 
-// ------------------------
-// Step 6: Set remainder sign same as x
-(REM_SIGN)
-@R5
+// Step 6: Set remainder sign (same as x)
+(SET_REM)
+@R10
 D=M
 @REM_POS
 D;JEQ
 
-@R9
+@R7
 D=M
 D=-D
 @R3
 M=D
-@SET_VALID
+@DONE
 0;JMP
 
 (REM_POS)
-@R9
+@R7
 D=M
 @R3
 M=D
 
-// ------------------------
-// Step 7: Set flag = 0 (valid)
-(SET_VALID)
+(DONE)
 @R4
-M=0
+M=0     // valid
 @END
 0;JMP
 
-// ------------------------
-// Step 8: Division by zero
+// Step 7: Division by zero
 (DIV_ZERO)
 @R2
 M=0
