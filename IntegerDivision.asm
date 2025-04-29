@@ -1,70 +1,74 @@
-// Check if divisor (y = R1) == 0
+// Check if divisor (R1) is zero
 @R1
 D=M
-@DIV_BY_ZERO
-D;JEQ        // If y == 0, jump to error handling
+@ERR
+D;JEQ           // If y == 0, division invalid
 
-// Initialize registers
+// Create working copies of x and y
 @R0
 D=M
-@R5
-M=D          // R5 = x (dividend), working copy
+@R6
+M=D             // Copy of x (dividend)
 
 @R1
 D=M
+@R7
+M=D             // Copy of y (divisor)
+
+@R8
+M=0             // Initialize quotient (count)
+
+(CHECK_LOOP)
 @R6
-M=D          // R6 = y (divisor), working copy
-
-@R2
-M=0          // R2 = m = quotient = 0
-
-// Loop: while R5 >= R6
-(LOOP)
-@R5
 D=M
-@R6
-D=D-M        // D = R5 - R6
-@DONE
-D;LT         // If R5 < R6, done
+@R7
+D=D-M
+@FINISH
+D;LT            // If x < y, done dividing
 
-// R5 = R5 - R6
-@R5
+// Subtract y from x
+@R6
 M=M
-@R6
+@R7
 D=M
-@R5
-M=M-D        // R5 -= R6
+@R6
+M=M-D           // x = x - y
 
-// R2++
-@R2
+// Increase quotient
+@R8
 M=M+1
-
-@LOOP
+@CHECK_LOOP
 0;JMP
 
-(DONE)
-// R3 = R5 (remainder)
-@R5
+(FINISH)
+// Set quotient result
+@R8
+D=M
+@R2
+M=D
+
+// Set remainder result
+@R6
 D=M
 @R3
 M=D
 
-// R4 = 0 (valid)
+// Division is valid
 @R4
 M=0
-@END
+@HALT
 0;JMP
 
-(DIV_BY_ZERO)
-// R2, R3 can be set to 0
+(ERR)
+// If invalid (y == 0), set flag and zero outputs
 @R2
 M=0
 @R3
 M=0
 @R4
-M=1         // R4 = 1 (invalid division)
+M=1
 
-(END)
-// End infinite loop
-@END
+(HALT)
+// End of program
+@HALT
 0;JMP
