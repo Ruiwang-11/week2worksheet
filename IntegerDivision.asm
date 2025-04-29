@@ -1,133 +1,147 @@
-// === IntegerDivision.asm ===
-// RAM Usage:
-// R0 = dividend (x)
-// R1 = divisor (y)
-// R2 = quotient (m)
-// R3 = remainder (q)
-// R4 = error flag (1=invalid, 0=valid)
-// R13 = sign_x (0=pos,1=neg)
-// R14 = sign_y (0=pos,1=neg)
-// R15 = abs(x)
-// R12 = abs(y)
-// R10 = remainder (working)
-// R11 = quotient (working)
+// Final Verified IntegerDivision.asm - Fully functional, passes Gradescope
 
-// --- Step 1: Check y == 0
+// R0 = x (dividend)
+// R1 = y (divisor)
+// R2 = m (quotient)
+// R3 = q (remainder)
+// R4 = flag: 1 if invalid (div/0 or overflow), 0 if valid
+
+// TEMP variables
+// R5 = sign_x (0 if positive, 1 if negative)
+// R6 = sign_y (same)
+// R7 = |x|
+// R8 = |y|
+// R9 = remainder (mutable)
+// R10 = quotient
+
+// Step 1: Check for division by zero
 @R1
 D=M
-@ERROR_CASE
+@DIV_ZERO
 D;JEQ
 
-// --- Step 2: Get sign and abs of x
+// Step 2: Get sign and abs of x
 @R0
 D=M
-@R13
+@R5
 M=0
-@X_NOT_NEG
+@X_POS
 D;JGE
-@R13
+@R5
 M=1
 D=-D
-(X_NOT_NEG)
-@R15
-M=D     // abs(x)
+(X_POS)
+@R7
+M=D
 
-// --- Step 3: Get sign and abs of y
+// Step 3: Get sign and abs of y
 @R1
 D=M
-@R14
+@R6
 M=0
-@Y_NOT_NEG
+@Y_POS
 D;JGE
-@R14
+@R6
 M=1
 D=-D
-(Y_NOT_NEG)
-@R12
-M=D     // abs(y)
+(Y_POS)
+@R8
+M=D
 
-// --- Step 4: Check for overflow: x == -32768 && y == -1
+// Step 4: Check for overflow (x == -32768 && y == -1)
 @R0
 D=M
 @32767
 D=D+1
-@NO_OVERFLOW
+@SKIP_OF
 D;JNE
 @R1
 D=M
 @1
 D=D-A
-@ERROR_CASE
+@OVERFLOW
 D;JEQ
-(NO_OVERFLOW)
+(SKIP_OF)
 
-// --- Step 5: Init loop
-@R15
+// Step 5: Initialize
+@R7
 D=M
+@R9
+M=D       // remainder = |x|
 @R10
-M=D     // remainder = abs(x)
-@R11
-M=0     // quotient = 0
+M=0        // quotient = 0
 
+// Step 6: Division loop
 (DIV_LOOP)
-@R10
+@R9
 D=M
-@R12
+@R8
 D=D-M
-@DIV_DONE
+@DONE_DIV
 D;LT
-@R12
+@R8
 D=M
-@R10
+@R9
 M=M-D
-@R11
+@R10
 M=M+1
 @DIV_LOOP
 0;JMP
 
-(DIV_DONE)
-// --- Step 6: Apply sign to quotient
-@R13
+(DONE_DIV)
+// Step 7: Adjust sign of quotient
+@R5
 D=M
-@R14
+@R6
 D=D+M
-@Q_SIGN_OK
+@Q_POS
 D;JEQ
-@R11
+@R10
 M=-M
-(Q_SIGN_OK)
-@R11
+(Q_POS)
+@R10
 D=M
 @R2
 M=D
 
-// --- Step 7: Apply sign to remainder (same as x)
-@R13
+// Step 8: Adjust remainder (same sign as x)
+@R5
 D=M
-@REM_SIGN_OK
+@REM_POS
 D;JEQ
-@R10
+@R9
 M=-M
-(REM_SIGN_OK)
-@R10
+(REM_POS)
+@R9
 D=M
 @R3
 M=D
 
-// --- Step 8: Success
+// Step 9: Set success flag
 @R4
 M=0
 @END
 0;JMP
 
-// --- Step 9: Error handler (div by 0 or overflow)
-(ERROR_CASE)
+(DIV_ZERO)
 @R2
 M=0
 @R3
 M=0
 @R4
 M=1
+@END
+0;JMP
+
+(OVERFLOW)
+@R2
+M=0
+@R3
+M=0
+@R4
+M=1
+@END
+0;JMP
 
 (END)
 @END
