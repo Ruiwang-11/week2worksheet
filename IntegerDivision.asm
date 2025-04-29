@@ -1,133 +1,111 @@
-// === Division by zero check ===
+// Step 1: Handle y == 0 (illegal division)
 @R1
 D=M
-@HANDLE_DIV_ZERO
-D;JEQ        // If divisor is zero, invalid division
+@DIV_ZERO
+D;JEQ            // if y == 0, jump to error
 
-// === Determine sign of dividend (R0) and record in R5 ===
+// Step 2: Store sign of x in R5, |x| in R7
 @R0
 D=M
 @R5
-M=0
-@SKIP_SIGN_R0
+M=0              // R5 = 0 means x >= 0
+@CHECK_X_POS
 D;JGE
 @R5
-M=1         // R5 = 1 if x < 0
-(SKIP_SIGN_R0)
-
-// === Take absolute value of R0 and store in ABS_R0 ===
+M=1              // R5 = 1 means x < 0
 @R0
 D=M
-@ABS_R0
-M=D
-@SKIP_ABS_R0
-D;JGE
-@D
-D=-D
-@ABS_R0
-M=D
-(SKIP_ABS_R0)
+D=-D             // D = |x|
+(CHECK_X_POS)
+@R7
+M=D              // R7 = abs(x)
 
-// === Determine sign of divisor (R1) and record in R6 ===
+// Step 3: Store sign of y in R6, |y| in R8
 @R1
 D=M
 @R6
-M=0
-@SKIP_SIGN_R1
+M=0              // R6 = 0 means y >= 0
+@CHECK_Y_POS
 D;JGE
 @R6
-M=1         // R6 = 1 if y < 0
-(SKIP_SIGN_R1)
-
-// === Take absolute value of R1 and store in ABS_R1 ===
+M=1              // R6 = 1 means y < 0
 @R1
 D=M
-@ABS_R1
-M=D
-@SKIP_ABS_R1
-D;JGE
-D=-D
-@ABS_R1
-M=D
-(SKIP_ABS_R1)
+D=-D             // D = |y|
+(CHECK_Y_POS)
+@R8
+M=D              // R8 = abs(y)
 
-// === Check overflow case: x == -32768 and y == 1 ===
-@ABS_R0
+// Step 4: Handle x = -32768 and y = -1 (overflow case)
+@R0
 D=M
-@32768
-D=D-A
-@CHECK_EXACT_OVERFLOW
+@NEG32768
+D=D+A            // D = x + 32768
+@SKIP_OF_CHECK
+D;JNE
+@R1
+D=M
+@MINUS_ONE
+D=D+1            // D = y + 1, if 0 => y == -1
+@DIV_OVERFLOW
 D;JEQ
-@BEGIN_DIV
-0;JMP
+(SKIP_OF_CHECK)
 
-(CHECK_EXACT_OVERFLOW)
-@ABS_R1
+// Step 5: Initialize division
+@R7
 D=M
-@ONE
-M=1
-D=D-M
-@OVERFLOW_CASE
-D;JEQ
-
-// === Division logic ===
-(BEGIN_DIV)
-@ABS_R0
-D=M
-@R3
-M=D           // R3 = remainder
+@REM
+M=D              // Remainder = |x|
 @R2
-M=0           // R2 = quotient
+M=0              // Quotient = 0
 
 (DIV_LOOP)
-@ABS_R1
+@REM
 D=M
-@R3
-D=M-D
-@EXIT_DIV
+@R8
+D=D-M            // if remainder < divisor, stop
+@AFTER_DIV
 D;LT
-@ABS_R1
-D=M
-@R3
-M=M-D
+@REM
+M=M-D            // REM = REM - divisor
 @R2
-M=M+1
+M=M+1            // quotient++
 @DIV_LOOP
 0;JMP
 
-(EXIT_DIV)
-// If signs of x and y differ, negate the quotient
+(AFTER_DIV)
+// Step 6: Apply correct sign to quotient
 @R5
 D=M
 @R6
-D=D-M
-@NEGATE_QUOT
-D;JNE
-@CHECK_REM_SIGN
-0;JMP
-
-(NEGATE_QUOT)
+D=D+M
+@POS_QUOT
+D;JEQ
 @R2
-M=-M
+M=-M             // negate quotient if signs differ
+(POS_QUOT)
 
-(CHECK_REM_SIGN)
-// If x < 0, negate remainder
+// Step 7: Apply sign to remainder (same as x)
 @R5
 D=M
-@SKIP_REM_SIGN
+@SKIP_NEG_REM
 D;JEQ
-@R3
+@REM
 M=-M
-(SKIP_REM_SIGN)
+(SKIP_NEG_REM)
 
-// Valid division flag
+// Step 8: Store final remainder and valid flag
+@REM
+D=M
+@R3
+M=D              // R3 = remainder
 @R4
-M=0
+M=0              // R4 = 0 => valid division
 @END
 0;JMP
 
-// === Handle y == 0 (division by zero) ===
-(HANDLE_DIV_ZERO)
+// Division by zero handler
+(DIV_ZERO)
 @R2
 M=0
 @R3
@@ -137,8 +115,8 @@ M=1
 @END
 0;JMP
 
-// === Handle overflow x = -32768 and y = 1 ===
-(OVERFLOW_CASE)
+// Overflow case: x = -32768, y = -1
+(DIV_OVERFLOW)
 @R2
 M=0
 @R3
@@ -148,6 +126,19 @@ M=1
 @END
 0;JMP
 
+// Program end loop
 (END)
 @END
 0;JMP
+
+// Constant labels (helpful for overflow detection)
+(NEG32768)
+@32768
+D=A
+D=-D
+@R0
+D=D+M            // x + 32768
+
+(MINUS_ONE)
+@1
+D=-A             // D = -1
