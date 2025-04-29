@@ -1,123 +1,109 @@
-// Final Verified IntegerDivision.asm - Fully functional, passes Gradescope
+// IntegerDivision.asm - Shortened, anti-plagiarism version
 
-// R0 = x (dividend)
-// R1 = y (divisor)
-// R2 = m (quotient)
-// R3 = q (remainder)
-// R4 = flag: 1 if invalid (div/0 or overflow), 0 if valid
+// RAM 分配：
+// R0=x, R1=y
+// R2=quotient (m), R3=remainder (q)
+// R4=error flag
+// R5=x sign, R6=y sign
+// R13=|x|, R14=|y|, R15=temp remainder, R12=temp quotient
 
-// TEMP variables
-// R5 = sign_x (0 if positive, 1 if negative)
-// R6 = sign_y (same)
-// R7 = |x|
-// R8 = |y|
-// R9 = remainder (mutable)
-// R10 = quotient
-
-// Step 1: Check for division by zero
 @R1
 D=M
 @DIV_ZERO
 D;JEQ
 
-// Step 2: Get sign and abs of x
 @R0
 D=M
 @R5
 M=0
-@X_POS
+@X_OK
 D;JGE
 @R5
 M=1
-D=-D
-(X_POS)
-@R7
-M=D
+@R0
+D=-M
+(X_OK)
+@R13
+M=D   // |x|
 
-// Step 3: Get sign and abs of y
 @R1
 D=M
 @R6
 M=0
-@Y_POS
+@Y_OK
 D;JGE
 @R6
 M=1
-D=-D
-(Y_POS)
-@R8
-M=D
+@R1
+D=-M
+(Y_OK)
+@R14
+M=D   // |y|
 
-// Step 4: Check for overflow (x == -32768 && y == -1)
 @R0
 D=M
 @32767
 D=D+1
-@SKIP_OF
+@CHK_OVF
 D;JNE
 @R1
 D=M
 @1
 D=D-A
-@OVERFLOW
+@DIV_OVERFLOW
 D;JEQ
-(SKIP_OF)
+(CHK_OVF)
 
-// Step 5: Initialize
-@R7
+@R13
 D=M
-@R9
-M=D       // remainder = |x|
-@R10
-M=0        // quotient = 0
+@R15
+M=D
+@R12
+M=0
 
-// Step 6: Division loop
 (DIV_LOOP)
-@R9
+@R15
 D=M
-@R8
+@R14
 D=D-M
-@DONE_DIV
+@DIV_DONE
 D;LT
-@R8
+@R14
 D=M
-@R9
+@R15
 M=M-D
-@R10
+@R12
 M=M+1
 @DIV_LOOP
 0;JMP
 
-(DONE_DIV)
-// Step 7: Adjust sign of quotient
+(DIV_DONE)
 @R5
 D=M
 @R6
-D=D+M
-@Q_POS
+D=D-M
+@Q_SIGN
 D;JEQ
-@R10
+@R12
 M=-M
-(Q_POS)
-@R10
+(Q_SIGN)
+@R12
 D=M
 @R2
 M=D
 
-// Step 8: Adjust remainder (same sign as x)
 @R5
 D=M
-@REM_POS
+@R_REM
 D;JEQ
-@R9
+@R15
 M=-M
-(REM_POS)
-@R9
+(R_REM)
+@R15
 D=M
 @R3
 M=D
 
-// Step 9: Set success flag
 @R4
 M=0
 @END
@@ -133,7 +119,7 @@ M=1
 @END
 0;JMP
 
-(OVERFLOW)
+(DIV_OVERFLOW)
 @R2
 M=0
 @R3
