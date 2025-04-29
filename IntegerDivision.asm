@@ -1,155 +1,164 @@
-// IntegerDivision.asm - Final perfect version
+// IntegerDivision.asm
 
-// Inputs:
-//   R0 = dividend x
-//   R1 = divisor y
-// Outputs:
-//   R2 = quotient m
-//   R3 = remainder q
-//   R4 = 1 if invalid (div-by-zero or overflow), else 0
-
-// Variables:
-// R5 = sign of x (0=positive, 1=negative)
-// R6 = sign of y (0=positive, 1=negative)
-// R7 = |x| (absolute value of x)
-// R8 = |y| (absolute value of y)
-// R9 = current remainder
-// R10 = current quotient
-
-// --------- Check if y == 0 (divide by zero)
+// Check if divisor (R1) is zero
 @R1
 D=M
-@DIV_ZERO
+@INVALID
 D;JEQ
 
-// --------- Get sign of x
+// Valid division, proceed
+@VALID
+0;JMP
+
+(INVALID)
+@R4
+M=1         // Set invalid flag
+@END
+0;JMP
+
+(VALID)
+@R4
+M=0         // Clear invalid flag
+
+// Save R0 and R1 to temporary registers R5 and R6
 @R0
 D=M
 @R5
-M=0
-@X_POS
-D;JGE
+M=D
+@R1
+D=M
+@R6
+M=D
+
+// Compute x_sign (sign of R0)
 @R5
-M=1
-@R0
-D=-M
-(X_POS)
-@R7
-M=D // store abs(x)
-
-// --------- Get sign of y
-@R1
 D=M
+@X_NEG
+D;JLT       // Jump if R5 (x) is negative
+@x_sign
+M=0         // x is positive
+@X_SIGN_DONE
+0;JMP
+(X_NEG)
+@x_sign
+M=1         // x is negative
+(X_SIGN_DONE)
+
+// Compute y_sign (sign of R1)
 @R6
-M=0
-@Y_POS
-D;JGE
+D=M
+@Y_NEG
+D;JLT       // Jump if R6 (y) is negative
+@y_sign
+M=0         // y is positive
+@Y_SIGN_DONE
+0;JMP
+(Y_NEG)
+@y_sign
+M=1         // y is negative
+(Y_SIGN_DONE)
+
+// Compute absolute value of x (R5)
+@R5
+D=M
+@x_abs
+M=D         // Assume positive
+@x_sign
+D=M
+@X_ABS_DONE
+D;JEQ       // If x is positive, done
+@R5
+D=M
+@x_abs
+M=-D        // Negate if x was negative
+(X_ABS_DONE)
+
+// Compute absolute value of y (R6)
 @R6
-M=1
-@R1
-D=-M
-(Y_POS)
-@R8
-M=D // store abs(y)
-
-// --------- Special overflow case: x == -32768 && y == -1
-@R0
 D=M
-@32767
-D=D+1
-@SKIP_OVERFLOW
-D;JNE
-@R1
+@y_abs
+M=D         // Assume positive
+@y_sign
 D=M
-@1
-D=D-A
-@DIV_OVERFLOW
-D;JEQ
-(SKIP_OVERFLOW)
-
-// --------- Initialize remainder and quotient
-@R7
+@Y_ABS_DONE
+D;JEQ       // If y is positive, done
+@R6
 D=M
-@R9
-M=D  // remainder = abs(x)
-@R10
-M=0  // quotient = 0
+@y_abs
+M=-D        // Negate if y was negative
+(Y_ABS_DONE)
 
-// --------- Perform division (repeated subtraction)
+// Perform unsigned division (x_abs / y_abs)
+@x_abs
+D=M
+@remainder
+M=D         // Initialize remainder to x_abs
+@quotient
+M=0         // Initialize quotient to 0
+
 (DIV_LOOP)
-@R9
+@y_abs
 D=M
-@R8
-D=D-M
-@DIV_DONE
-D;LT
-@R8
+@remainder
+D=M-D       // D = remainder - y_abs
+@END_DIV_LOOP
+D;JLT       // Exit loop if remainder < y_abs
+
+// Subtract y_abs from remainder and increment quotient
+@y_abs
 D=M
-@R9
+@remainder
 M=M-D
-@R10
+@quotient
 M=M+1
 @DIV_LOOP
 0;JMP
 
-// --------- Division done, adjust signs
-(DIV_DONE)
+(END_DIV_LOOP)
 
-// Quotient sign adjustment: if x and y signs differ, quotient = -quotient
-@R5
+// Determine quotient's sign
+@x_sign
 D=M
-@R6
+@y_sign
 D=D-M
-@QUOT_SIGN_DONE
-D;JEQ
-@R10
-M=-M
-(QUOT_SIGN_DONE)
-@R10
+@SAME_SIGN
+D;JEQ       // If signs are the same, quotient is positive
+
+// Signs differ, quotient is negative
+@quotient
 D=M
 @R2
-M=D
+M=-D
+@SIGN_DONE
+0;JMP
 
-// Remainder sign adjustment: remainder follows x's sign
-@R5
+(SAME_SIGN)
+@quotient
 D=M
-@REM_SIGN_DONE
-D;JEQ
-@R9
-M=-M
-(REM_SIGN_DONE)
-@R9
+@R2
+M=D         // Quotient is positive
+(SIGN_DONE)
+
+// Determine remainder's sign based on x's sign
+@x_sign
+D=M
+@MAKE_NEG
+D;JNE       // If x was negative, negate remainder
+
+// Remainder is positive
+@remainder
 D=M
 @R3
 M=D
-
-// Set valid division flag
-@R4
-M=0
-@END
+@REMAINDER_DONE
 0;JMP
 
-// --------- Divide by zero handler
-(DIV_ZERO)
-@R2
-M=0
+(MAKE_NEG)
+@remainder
+D=M
 @R3
-M=0
-@R4
-M=1
-@END
-0;JMP
-
-// --------- Overflow handler (x == -32768 and y == -1)
-(DIV_OVERFLOW)
-@R2
-M=0
-@R3
-M=0
-@R4
-M=1
-@END
-0;JMP
+M=-D        // Remainder is negative
+(REMAINDER_DONE)
 
 (END)
 @END
